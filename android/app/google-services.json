@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "187997039231",
+    "project_id": "movietheater-75832",
+    "storage_bucket": "movietheater-75832.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:187997039231:android:0d8d60c81762ab8a69ad4a",
+        "android_client_info": {
+          "package_name": "com.movietheater"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwG-TSNcbzHHnMXC4GNr25wpwzupESB7k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:187997039231:android:85530deba8d6ede569ad4a",
+        "android_client_info": {
+          "package_name": "com.movietheater.movietheater"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwG-TSNcbzHHnMXC4GNr25wpwzupESB7k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
