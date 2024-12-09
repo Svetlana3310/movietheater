@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'firebase_options.dart'; // Import the generated file
 //import 'package:movietheater/movies.dart';
 //import 'package:movietheater/users.dart';
 //import 'package:movietheater/orders.dart';
+//import 'package:movietheater/modify_movies.dart';
 
 void main() async {
   WidgetsFlutterBinding
@@ -16,6 +18,42 @@ void main() async {
   //await addMovies();
   //await addUsers();
   //await addOrders();
+  // Define the updates for each document
+  /*Map<String, Map<String, String>> updatedFields = {
+    "movie1": {
+      "title": "Wicked: Чародійка",
+      "image": "https://multiplex.ua/images/02/42/024233986fa26ddd5780588e41e65953.jpeg",
+      "video": "https://www.youtube.com/watch?v=FUOTfFFppos",
+    },
+    "movie2": {
+      "title": "Гладіатор ІІ",
+      "image": "https://multiplex.ua/images/0f/d7/0fd76a44d37467dadb503a60ed3db899.jpeg",
+      "video": "https://www.youtube.com/watch?v=CfNx4EKIcyU",
+    },
+    "movie3": {
+      "title": "Кодове ім'я \"Червоний\"",
+      "image": "https://multiplex.ua/images/57/0a/570a50d60c7d45633c7f026b22a0d053.jpeg",
+      "video": "https://www.youtube.com/watch?v=gpjjdGMYo1k",
+    },
+    "movie4": {
+      "title": "Веном: Останній танець",
+      "image": "https://multiplex.ua/images/86/94/8694a5f64fdb5f116593cb53ac952a96.jpeg",
+      "video": "https://www.youtube.com/watch?v=ji5jCOhztyQ",
+    },
+    "movie5": {
+      "title": "Потік. Останній кіт на Землі",
+      "image": "https://multiplex.ua/images/5f/86/5f86e9753eef5521be84e06e4e3048a3.jpeg",
+      "video": "https://www.youtube.com/watch?v=cad341eGIfQ",
+    },
+    "movie6": {
+      "title": "Жахаючий 3",
+      "image": "https://multiplex.ua/images/b7/36/b736933608bef6ba422684adf5c6a35b.jpeg",
+      "video": "https://www.youtube.com/watch?v=ZSd5eXPPNkU",
+    },
+  };
+
+  await modifyMovies(updatedFields); // Call the function with the updates
+  */
   runApp(MyApp());
 }
 
@@ -49,12 +87,16 @@ class MovieSelectionScreen extends StatelessWidget {
 
           final movies = snapshot.data!.docs;
 
-          return ListView.builder(
+          return GridView.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
             itemCount: movies.length,
             itemBuilder: (context, index) {
               final movie = movies[index];
-              return ListTile(
-                title: Text(movie['title']),
+              return GestureDetector(
                 onTap: () {
                   Navigator.push(
                     context,
@@ -64,6 +106,31 @@ class MovieSelectionScreen extends StatelessWidget {
                     ),
                   );
                 },
+                child: Card(
+                  elevation: 5,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Image.network(
+                          movie['image'],
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          movie['title'],
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               );
             },
           );
@@ -74,19 +141,111 @@ class MovieSelectionScreen extends StatelessWidget {
 }
 
 // Screen to select a session
-class SessionSelectionScreen extends StatelessWidget {
+class SessionSelectionScreen extends StatefulWidget {
   final String movieId;
 
   SessionSelectionScreen({required this.movieId});
+
+  @override
+  _SessionSelectionScreenState createState() => _SessionSelectionScreenState();
+}
+
+class _SessionSelectionScreenState extends State<SessionSelectionScreen> {
+  String movieTitle = 'Loading...';
+  String movieImage = '';
+  String movieTrailerUrl = '';
+  late YoutubePlayerController _youtubePlayerController;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMovieDetails();
+  }
+
+  Future<void> _fetchMovieDetails() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    try {
+      DocumentSnapshot movieSnapshot =
+          await firestore.collection('movies').doc(widget.movieId).get();
+
+      setState(() {
+        movieTitle = movieSnapshot.get('title');
+        movieImage = movieSnapshot.get('image');
+        movieTrailerUrl = YoutubePlayer.convertUrlToId(
+            movieSnapshot.get('video'))!; // Extract YouTube video ID
+        _youtubePlayerController = YoutubePlayerController(
+          initialVideoId: movieTrailerUrl,
+          flags: YoutubePlayerFlags(
+            autoPlay: false,
+            mute: false,
+          ),
+        );
+      });
+    } catch (e) {
+      print("Error fetching movie details: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    _youtubePlayerController.dispose();
+    super.dispose();
+  }
+
+void _showTrailerPopup(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) => Dialog(
+      insetPadding: EdgeInsets.all(16), // Padding for the popup
+      child: Stack(
+        clipBehavior: Clip.none, // Allows the button to be positioned outside the dialog
+        children: [
+          // The YouTube Player
+          YoutubePlayer(
+            controller: YoutubePlayerController(
+              initialVideoId: movieTrailerUrl,
+              flags: YoutubePlayerFlags(
+                autoPlay: true,
+                mute: false,
+              ),
+            ),
+            showVideoProgressIndicator: true,
+          ),
+          // Close button, absolutely positioned
+          Positioned(
+            top: -20, // Slightly above the dialog
+            right: -10, // 10px outside the right edge of the dialog
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.black.withOpacity(0.6), // Background color
+              child: IconButton(
+                icon: Icon(Icons.close, color: Colors.white),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Вибір сеансу')),
+      appBar: AppBar(title: Text(movieTitle)),
       body: FutureBuilder<DocumentSnapshot>(
-        future: firestore.collection('movies').doc(movieId).get(),
+        future: firestore.collection('movies').doc(widget.movieId).get(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -99,22 +258,36 @@ class SessionSelectionScreen extends StatelessWidget {
               (snapshot.data!.data() as Map<String, dynamic>)['sessions'];
 
           return ListView(
-            children: sessions.keys.map<Widget>((sessionTime) {
-              return ListTile(
-                title: Text(sessionTime),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => SeatingChart(
-                        movieId: movieId,
-                        session: sessionTime,
+            children: [
+              Column(
+                children: [
+                  Image.network(movieImage, fit: BoxFit.cover),
+                  ElevatedButton(
+                    onPressed: () {
+                      _showTrailerPopup(context);
+                    },
+                    child: Text("Play Trailer"),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
+              ...sessions.keys.map<Widget>((sessionTime) {
+                return ListTile(
+                  title: Text(sessionTime),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SeatingChart(
+                          movieId: widget.movieId,
+                          session: sessionTime,
+                        ),
                       ),
-                    ),
-                  );
-                },
-              );
-            }).toList(),
+                    );
+                  },
+                );
+              }).toList(),
+            ],
           );
         },
       ),
